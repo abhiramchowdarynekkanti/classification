@@ -11,8 +11,8 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, r2_score
 
 # ---- Streamlit UI ----
-st.set_page_config(page_title="🚢 Titanic ML Dashboard", layout="centered")
-st.title("🚢 Titanic Survival Prediction")
+st.set_page_config(page_title="🚢  ML Dashboard", layout="centered")
+st.title("🚢 Classification ")
 st.write("This app trains multiple ML models on the Titanic dataset and shows their performance.")
 
 # ---- Load Data ----
@@ -22,7 +22,7 @@ def load_data(file):
     return df
 
 # ---- File Upload ----
-st.subheader("Upload Titanic Dataset")
+st.subheader("Upload Dataset")
 uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 
 if uploaded_file is not None:
@@ -30,7 +30,7 @@ if uploaded_file is not None:
     st.subheader("🗃️ Raw Data Preview")
     st.dataframe(df.head())
 else:
-    st.warning("Please upload the Titanic dataset to continue.")
+    st.warning("Please upload the  dataset to continue.")
 
 # ---- Preprocess ----
 def preprocess(df):
