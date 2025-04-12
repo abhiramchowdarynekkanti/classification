@@ -141,4 +141,36 @@ if uploaded_file is not None:
 
     best_model_name = results_df.iloc[0]['Model']
     st.success(f"🎉 Best Model ({mode}): **{best_model_name}**")
+        # ---- Display Results ----
+    results_df = pd.DataFrame(results)
+    results_df = results_df.sort_values(by='F1 Score', ascending=False).reset_index(drop=True)
+
+    st.subheader("📊 Model Performance Comparison")
+    st.dataframe(results_df)
+
+    best_model_name = results_df.iloc[0]['Model']
+    st.success(f"🎉 Best Model ({mode}): **{best_model_name}**")
+
+    # ---- Use Best Model to Predict ----
+    st.subheader("🔮 Predictions by Best Model")
+
+    if mode == "Without Tuning":
+        best_model = base_models[best_model_name]
+        best_model.fit(X_train, y_train)
+    else:
+        model, params = models_params[best_model_name]
+        grid = GridSearchCV(model, params, cv=3, scoring='f1', n_jobs=-1)
+        grid.fit(X_train, y_train)
+        best_model = grid.best_estimator_
+
+    predictions = best_model.predict(X_test)
+
+    pred_df = X_test.copy()
+    pred_df['Actual'] = y_test.values
+    pred_df['Predicted'] = predictions
+    pred_df['Predicted'] = pred_df['Predicted'].map({0: 'Not Survived', 1: 'Survived'})
+    pred_df['Actual'] = pred_df['Actual'].map({0: 'Not Survived', 1: 'Survived'})
+
+    st.dataframe(pred_df.head(20))
+
 
