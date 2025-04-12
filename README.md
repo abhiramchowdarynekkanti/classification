@@ -1,25 +1,60 @@
-📊 Classification Project with Evaluation & Dashboard Integration
-This project involves building a classification model to predict [insert target variable here], exploring various machine learning algorithms and evaluation metrics. The workflow includes training models, evaluating performance with and without hyperparameter tuning, and visualizing results on an interactive dashboard.
+Website Link  https://classification-3spznfj4jz6b9rwugpl69y.streamlit.app/
+🚢 Classification Dashboard
+A complete machine learning pipeline to predict Titanic passenger survival. Compares models with and without hyperparameter tuning, presented through an interactive Streamlit dashboard.
 
-🔍 Key Features
-Data preprocessing and feature engineering
+📁 Project Structure
+📊 Data Preparation: Cleans data, handles missing values, feature engineering (family_size), and encoding.
 
-Multiple classification algorithms (e.g., Logistic Regression, Random Forest, XGBoost, etc.)
+🤖 Modeling: Trains models with and without tuning using GridSearchCV.
 
-Model evaluation using metrics such as:
+📈 Evaluation: Displays performance metrics with Streamlit interface.
 
-Accuracy
+🧠 Algorithms Implemented
+🔹 Logistic Regression
+Type: Linear binary classifier
 
-Precision
+Tuned: C, penalty
 
-Recall
+🌲 Decision Tree
+Type: Rule-based tree
 
-F1-score
+Tuned: max_depth, min_samples_split
 
-ROC-AUC
+🌳 Random Forest
+Type: Ensemble of trees
 
-Confusion Matrix
+Tuned: n_estimators, max_depth, min_samples_split
 
-Hyperparameter tuning using GridSearchCV/RandomizedSearchCV
+💠 SVM (Support Vector Machine)
+Type: Margin-based classifier
 
-Comparison of model performance before and after tuning
+Tuned: C, kernel
+
+⚡ Gradient Boosting
+Type: Boosted weak learners
+
+Tuned: n_estimators, learning_rate, max_depth
+
+🛠️ Optimization Strategies
+🔸 Without Tuning
+Uses default model parameters
+
+Fast and useful for baselines
+
+🔹 With Tuning (GridSearchCV)
+3-fold cross-validation
+
+Optimizes for F1 Score
+
+Reduced parameter grid for speed
+
+📏 Evaluation Metrics
+✅ Accuracy – Overall correctness
+
+🎯 Precision – True positives out of predicted positives
+
+📢 Recall – True positives out of actual positives
+
+⚖️ F1 Score – Balance of precision and recall
+
+📉 R² Score – Regression metric (comparison only)
