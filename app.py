@@ -33,19 +33,19 @@ use_sample = st.checkbox("Use Titanic Sample Dataset")
 
 if use_sample:
     df = load_sample_data()
+    # Pre-select "Survived" as the target column for Titanic dataset
+    target_column = 'Survived'
 else:
     uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
     if uploaded_file:
         df = load_uploaded_data(uploaded_file)
+        target_column = st.selectbox("🎯 Select Target Column", df.columns)
     else:
         st.error("Please upload a file or select the sample dataset.")
         st.stop()
 
 st.subheader("🔍 Raw Data Preview")
 st.dataframe(df.head())
-
-# ---- Select Target Column ----
-target_column = st.selectbox("🎯 Select Target Column", df.columns)
 
 # ---- Preprocessing ----
 def preprocess_data(df, target_column):
