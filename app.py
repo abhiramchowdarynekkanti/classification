@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
+from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
@@ -11,160 +12,157 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, r2_score
 
 # ---- Streamlit UI ----
-st.set_page_config(page_title="🚢 ML Dashboard", layout="centered")
-st.title("🚢 Classification ")
-st.write("This app trains multiple ML models on the Titanic dataset and shows their performance.")
+st.set_page_config(page_title="🧠 ML Classifier Dashboard", layout="centered")
+st.title("🧠 Classification on Custom Dataset")
+st.write("Upload a CSV dataset and this app will train multiple classifiers, apply PCA, and show results.")
 
 # ---- Load Data ----
 @st.cache_data
 def load_data(file):
-    df = pd.read_csv(file)
-    return df
+    return pd.read_csv(file)
 
-# ---- File Upload or Sample ----
-st.subheader("📁 Upload Dataset")
-sample_url = "https://raw.githubusercontent.com/abhiramchowdarynekkanti/classification/main/titanic_data.csv"
+st.subheader("📂 Upload Dataset")
+uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
-uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
-use_sample = st.checkbox("🧪 Wanna test? Load sample Titanic data")
+if not uploaded_file:
+    st.stop()
 
-if uploaded_file is not None:
-    df = load_data(uploaded_file)
-    st.subheader("🗃️ Raw Data Preview")
-    st.dataframe(df.head())
+df = load_data(uploaded_file)
+st.subheader("🔍 Raw Data Preview")
+st.dataframe(df.head())
 
-elif use_sample:
-    df = load_data(sample_url)
-    st.info("✅ Sample Titanic dataset loaded from GitHub.")
-    st.subheader("🗃️ Raw Data Preview")
-    st.dataframe(df.head())
+# ---- Select Target Column ----
+target_column = st.selectbox("🎯 Select Target Column", df.columns)
 
-else:
-    st.warning("Please upload a dataset or check 'Wanna test?' to use the sample data.")
-
-# ---- Preprocess ----
-def preprocess(df):
+# ---- Preprocessing ----
+def preprocess_data(df, target_column):
     df = df.copy()
-    df.drop(columns=['class', 'who', 'adult_male', 'deck', 'embark_town', 'alive'], inplace=True, errors='ignore')
-    df['age'] = SimpleImputer(strategy='median').fit_transform(df[['age']])
-    df['embarked'] = df['embarked'].fillna(df['embarked'].mode()[0])
-    le = LabelEncoder()
-    df['sex'] = le.fit_transform(df['sex'])
-    df['embarked'] = le.fit_transform(df['embarked'])
-    df['family_size'] = df['sibsp'] + df['parch']
-    df.drop(columns=['sibsp', 'parch'], inplace=True)
-    return df
+    y = df[target_column]
+    X = df.drop(columns=[target_column])
 
-if (uploaded_file is not None) or use_sample:
-    df_clean = preprocess(df)
+    # Impute missing values
+    num_cols = X.select_dtypes(include=np.number).columns
+    cat_cols = X.select_dtypes(include='object').columns
 
-    # ---- Train-test Split ----
-    X = df_clean.drop(columns='survived')
-    y = df_clean['survived']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    if len(num_cols) > 0:
+        X[num_cols] = SimpleImputer(strategy="median").fit_transform(X[num_cols])
+    if len(cat_cols) > 0:
+        X[cat_cols] = X[cat_cols].fillna(X[cat_cols].mode().iloc[0])
+        for col in cat_cols:
+            X[col] = LabelEncoder().fit_transform(X[col])
 
-    # ---- Models ----
-    base_models = {
-        'Logistic Regression': LogisticRegression(max_iter=1000),
-        'Decision Tree': DecisionTreeClassifier(),
-        'Random Forest': RandomForestClassifier(),
-        'SVM': SVC(probability=True),
-        'Gradient Boosting': GradientBoostingClassifier()
-    }
+    # Standardize
+    X = pd.DataFrame(StandardScaler().fit_transform(X), columns=X.columns)
 
-    models_params = {
-        'Logistic Regression': (
-            LogisticRegression(max_iter=1000),
-            {'C': [0.1, 1, 10]}
-        ),
-        'Decision Tree': (
-            DecisionTreeClassifier(),
-            {'max_depth': [5, 10], 'min_samples_split': [2, 5]}
-        ),
-        'Random Forest': (
-            RandomForestClassifier(),
-            {'n_estimators': [50, 100], 'max_depth': [5, 10]}
-        ),
-        'SVM': (
-            SVC(probability=True),
-            {'C': [0.1, 1], 'kernel': ['linear', 'rbf']}
-        ),
-        'Gradient Boosting': (
-            GradientBoostingClassifier(),
-            {'n_estimators': [50, 100], 'learning_rate': [0.05, 0.1]}
-        )
-    }
+    return X, y
 
-    # ---- Select Mode ----
-    mode = st.radio("🛠️ Select Training Mode", ["Without Tuning", "With Tuning"])
+X, y = preprocess_data(df, target_column)
 
-    # ---- Training & Evaluation ----
-    results = []
+# ---- Apply PCA ----
+pca = PCA(n_components=0.95, svd_solver='full')
+X_pca = pca.fit_transform(X)
 
-    with st.spinner(f"Training models ({mode})..."):
-        if mode == "Without Tuning":
-            for name, model in base_models.items():
-                model.fit(X_train, y_train)
-                y_pred = model.predict(X_test)
-                try:
-                    r2 = r2_score(y_test, model.predict_proba(X_test)[:, 1])
-                except:
-                    r2 = None
-                results.append({
-                    'Model': name,
-                    'Accuracy': round(accuracy_score(y_test, y_pred), 4),
-                    'Precision': round(precision_score(y_test, y_pred), 4),
-                    'Recall': round(recall_score(y_test, y_pred), 4),
-                    'F1 Score': round(f1_score(y_test, y_pred), 4),
-                    'R² Score': round(r2, 4) if r2 is not None else '—'
-                })
-        else:
-            for name, (model, params) in models_params.items():
-                grid = GridSearchCV(model, params, cv=3, scoring='f1', n_jobs=-1)
-                grid.fit(X_train, y_train)
-                best_model = grid.best_estimator_
-                y_pred = best_model.predict(X_test)
-                try:
-                    r2 = r2_score(y_test, best_model.predict_proba(X_test)[:, 1])
-                except:
-                    r2 = None
-                results.append({
-                    'Model': name,
-                    'Accuracy': round(accuracy_score(y_test, y_pred), 4),
-                    'Precision': round(precision_score(y_test, y_pred), 4),
-                    'Recall': round(recall_score(y_test, y_pred), 4),
-                    'F1 Score': round(f1_score(y_test, y_pred), 4),
-                    'R² Score': round(r2, 4) if r2 is not None else '—'
-                })
+st.write(f"✅ PCA applied. Reduced from {X.shape[1]} ➝ {X_pca.shape[1]} features (95% variance retained)")
 
-    # ---- Display Results ----
-    results_df = pd.DataFrame(results)
-    results_df = results_df.sort_values(by='F1 Score', ascending=False).reset_index(drop=True)
+# ---- Train-test Split ----
+X_train, X_test, y_train, y_test = train_test_split(X_pca, y, test_size=0.2, random_state=42)
 
-    st.subheader("📊 Model Performance Comparison")
-    st.dataframe(results_df)
+# ---- Model Definitions ----
+base_models = {
+    'Logistic Regression': LogisticRegression(max_iter=1000),
+    'Decision Tree': DecisionTreeClassifier(),
+    'Random Forest': RandomForestClassifier(),
+    'SVM': SVC(probability=True),
+    'Gradient Boosting': GradientBoostingClassifier()
+}
 
-    best_model_name = results_df.iloc[0]['Model']
-    st.success(f"🎉 Best Model ({mode}): **{best_model_name}**")
+model_params = {
+    'Logistic Regression': (
+        LogisticRegression(max_iter=1000),
+        {'C': [0.1, 1, 10]}
+    ),
+    'Decision Tree': (
+        DecisionTreeClassifier(),
+        {'max_depth': [5, 10], 'min_samples_split': [2, 5]}
+    ),
+    'Random Forest': (
+        RandomForestClassifier(),
+        {'n_estimators': [50, 100], 'max_depth': [5, 10]}
+    ),
+    'SVM': (
+        SVC(probability=True),
+        {'C': [0.1, 1], 'kernel': ['linear', 'rbf']}
+    ),
+    'Gradient Boosting': (
+        GradientBoostingClassifier(),
+        {'n_estimators': [50, 100], 'learning_rate': [0.05, 0.1]}
+    )
+}
 
-    # ---- Use Best Model to Predict ----
-    st.subheader("🔮 Predictions by Best Model")
+# ---- Training Mode ----
+mode = st.radio("⚙️ Select Training Mode", ["Without Tuning", "With Tuning"])
+results = []
 
+with st.spinner("Training models..."):
     if mode == "Without Tuning":
-        best_model = base_models[best_model_name]
-        best_model.fit(X_train, y_train)
+        for name, model in base_models.items():
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+            try:
+                r2 = r2_score(y_test, model.predict_proba(X_test)[:, 1])
+            except:
+                r2 = None
+            results.append({
+                'Model': name,
+                'Accuracy': round(accuracy_score(y_test, y_pred), 4),
+                'Precision': round(precision_score(y_test, y_pred, zero_division=0), 4),
+                'Recall': round(recall_score(y_test, y_pred, zero_division=0), 4),
+                'F1 Score': round(f1_score(y_test, y_pred, zero_division=0), 4),
+                'R² Score': round(r2, 4) if r2 is not None else '—'
+            })
     else:
-        model, params = models_params[best_model_name]
-        grid = GridSearchCV(model, params, cv=3, scoring='f1', n_jobs=-1)
-        grid.fit(X_train, y_train)
-        best_model = grid.best_estimator_
+        for name, (model, params) in model_params.items():
+            grid = GridSearchCV(model, params, scoring='f1', cv=3, n_jobs=-1)
+            grid.fit(X_train, y_train)
+            best_model = grid.best_estimator_
+            y_pred = best_model.predict(X_test)
+            try:
+                r2 = r2_score(y_test, best_model.predict_proba(X_test)[:, 1])
+            except:
+                r2 = None
+            results.append({
+                'Model': name,
+                'Accuracy': round(accuracy_score(y_test, y_pred), 4),
+                'Precision': round(precision_score(y_test, y_pred, zero_division=0), 4),
+                'Recall': round(recall_score(y_test, y_pred, zero_division=0), 4),
+                'F1 Score': round(f1_score(y_test, y_pred, zero_division=0), 4),
+                'R² Score': round(r2, 4) if r2 is not None else '—'
+            })
 
-    predictions = best_model.predict(X_test)
+# ---- Results Table ----
+st.subheader("📈 Model Performance")
+results_df = pd.DataFrame(results)
+results_df = results_df.sort_values(by='F1 Score', ascending=False).reset_index(drop=True)
+st.dataframe(results_df)
 
-    pred_df = X_test.copy()
-    pred_df['Actual'] = y_test.values
-    pred_df['Predicted'] = predictions
-    pred_df['Predicted'] = pred_df['Predicted'].map({0: 'Not Survived', 1: 'Survived'})
-    pred_df['Actual'] = pred_df['Actual'].map({0: 'Not Survived', 1: 'Survived'})
+best_model_name = results_df.iloc[0]['Model']
+st.success(f"🏆 Best Model: **{best_model_name}** ({mode})")
 
-    st.dataframe(pred_df.head(20))
+# ---- Predictions Preview ----
+st.subheader("🔮 Sample Predictions")
+
+if mode == "Without Tuning":
+    model = base_models[best_model_name]
+    model.fit(X_train, y_train)
+else:
+    model, params = model_params[best_model_name]
+    grid = GridSearchCV(model, params, scoring='f1', cv=3, n_jobs=-1)
+    grid.fit(X_train, y_train)
+    model = grid.best_estimator_
+
+y_pred = model.predict(X_test)
+
+preview = pd.DataFrame(X_test).copy()
+preview['Actual'] = y_test.values
+preview['Predicted'] = y_pred
+st.dataframe(preview.head(20))
