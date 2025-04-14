@@ -18,27 +18,28 @@ st.write("Upload a CSV dataset or test the Titanic dataset. This app trains mult
 # ---- Load Data ----
 @st.cache_data
 def load_sample_data():
+    # Load Titanic dataset from URL
     url = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
     return pd.read_csv(url)
 
+# ---- Load Data Function (for custom upload) ----
+def load_uploaded_data(uploaded_file):
+    return pd.read_csv(uploaded_file)
 
-
+# ---- User Input ----
 st.subheader("📂 Upload Dataset or Use Sample")
 
 use_sample = st.checkbox("Use Titanic Sample Dataset")
+
 if use_sample:
-
-
-
-
-    df = pd.read_csv("https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv")
-
-
+    df = load_sample_data()
 else:
     uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
-    if not uploaded_file:
+    if uploaded_file:
+        df = load_uploaded_data(uploaded_file)
+    else:
+        st.error("Please upload a file or select the sample dataset.")
         st.stop()
-    df = load_data(uploaded_file)
 
 st.subheader("🔍 Raw Data Preview")
 st.dataframe(df.head())
