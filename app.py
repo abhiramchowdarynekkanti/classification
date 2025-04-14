@@ -115,9 +115,11 @@ with st.spinner("Training models..."):
             results.append({
                 'Model': name,
                 'Accuracy': round(accuracy_score(y_test, y_pred), 4),
-                'Precision': round(precision_score(y_test, y_pred, zero_division=0), 4),
-                'Recall': round(recall_score(y_test, y_pred, zero_division=0), 4),
-                'F1 Score': round(f1_score(y_test, y_pred, zero_division=0), 4),
+                'Precision': round(precision_score(y_test, y_pred, average="weighted", zero_division=0), 4),
+                'Recall': round(recall_score(y_test, y_pred, average="weighted", zero_division=0), 4),
+               'F1 Score': round(f1_score(y_test, y_pred, average="weighted", zero_division=0), 4),
+
+
                 'R² Score': round(r2, 4) if r2 is not None else '—'
             })
     else:
