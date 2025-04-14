@@ -11,7 +11,7 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, r2_score
 
 # ---- Streamlit UI ----
-st.set_page_config(page_title="🚢  ML Dashboard", layout="centered")
+st.set_page_config(page_title="🚢 ML Dashboard", layout="centered")
 st.title("🚢 Classification ")
 st.write("This app trains multiple ML models on the Titanic dataset and shows their performance.")
 
@@ -21,21 +21,31 @@ def load_data(file):
     df = pd.read_csv(file)
     return df
 
-# ---- File Upload ----
-st.subheader("Upload Dataset")
+# ---- File Upload or Sample ----
+st.subheader("📁 Upload Dataset")
+sample_url = "https://raw.githubusercontent.com/abhiramchowdarynekkanti/classification/main/titanic_data.csv"
+
 uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+use_sample = st.checkbox("🧪 Wanna test? Load sample Titanic data")
 
 if uploaded_file is not None:
     df = load_data(uploaded_file)
     st.subheader("🗃️ Raw Data Preview")
     st.dataframe(df.head())
+
+elif use_sample:
+    df = load_data(sample_url)
+    st.info("✅ Sample Titanic dataset loaded from GitHub.")
+    st.subheader("🗃️ Raw Data Preview")
+    st.dataframe(df.head())
+
 else:
-    st.warning("Please upload the  dataset to continue.")
+    st.warning("Please upload a dataset or check 'Wanna test?' to use the sample data.")
 
 # ---- Preprocess ----
 def preprocess(df):
     df = df.copy()
-    df.drop(columns=['class', 'who', 'adult_male', 'deck', 'embark_town', 'alive'], inplace=True)
+    df.drop(columns=['class', 'who', 'adult_male', 'deck', 'embark_town', 'alive'], inplace=True, errors='ignore')
     df['age'] = SimpleImputer(strategy='median').fit_transform(df[['age']])
     df['embarked'] = df['embarked'].fillna(df['embarked'].mode()[0])
     le = LabelEncoder()
@@ -45,7 +55,7 @@ def preprocess(df):
     df.drop(columns=['sibsp', 'parch'], inplace=True)
     return df
 
-if uploaded_file is not None:
+if (uploaded_file is not None) or use_sample:
     df_clean = preprocess(df)
 
     # ---- Train-test Split ----
@@ -96,12 +106,10 @@ if uploaded_file is not None:
             for name, model in base_models.items():
                 model.fit(X_train, y_train)
                 y_pred = model.predict(X_test)
-
                 try:
                     r2 = r2_score(y_test, model.predict_proba(X_test)[:, 1])
                 except:
                     r2 = None
-
                 results.append({
                     'Model': name,
                     'Accuracy': round(accuracy_score(y_test, y_pred), 4),
@@ -110,19 +118,16 @@ if uploaded_file is not None:
                     'F1 Score': round(f1_score(y_test, y_pred), 4),
                     'R² Score': round(r2, 4) if r2 is not None else '—'
                 })
-
         else:
             for name, (model, params) in models_params.items():
                 grid = GridSearchCV(model, params, cv=3, scoring='f1', n_jobs=-1)
                 grid.fit(X_train, y_train)
                 best_model = grid.best_estimator_
                 y_pred = best_model.predict(X_test)
-
                 try:
                     r2 = r2_score(y_test, best_model.predict_proba(X_test)[:, 1])
                 except:
                     r2 = None
-
                 results.append({
                     'Model': name,
                     'Accuracy': round(accuracy_score(y_test, y_pred), 4),
@@ -133,15 +138,6 @@ if uploaded_file is not None:
                 })
 
     # ---- Display Results ----
-    results_df = pd.DataFrame(results)
-    results_df = results_df.sort_values(by='F1 Score', ascending=False).reset_index(drop=True)
-
-    st.subheader("📊 Model Performance Comparison")
-    st.dataframe(results_df)
-
-    best_model_name = results_df.iloc[0]['Model']
-    st.success(f"🎉 Best Model ({mode}): **{best_model_name}**")
-        # ---- Display Results ----
     results_df = pd.DataFrame(results)
     results_df = results_df.sort_values(by='F1 Score', ascending=False).reset_index(drop=True)
 
@@ -172,5 +168,3 @@ if uploaded_file is not None:
     pred_df['Actual'] = pred_df['Actual'].map({0: 'Not Survived', 1: 'Survived'})
 
     st.dataframe(pred_df.head(20))
-
-
