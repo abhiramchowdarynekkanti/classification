@@ -4,7 +4,6 @@ import numpy as np
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
-from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
@@ -14,20 +13,24 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 # ---- Streamlit UI ----
 st.set_page_config(page_title="🧠 ML Classifier Dashboard", layout="centered")
 st.title("🧠 Classification on Custom Dataset")
-st.write("Upload a CSV dataset and this app will train multiple classifiers, apply PCA, and show results.")
+st.write("Upload a CSV dataset or test the Titanic dataset. This app trains multiple classifiers and shows results.")
 
 # ---- Load Data ----
 @st.cache_data
 def load_data(file):
     return pd.read_csv(file)
 
-st.subheader("📂 Upload Dataset")
-uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+st.subheader("📂 Upload Dataset or Use Sample")
 
-if not uploaded_file:
-    st.stop()
+use_sample = st.checkbox("Use Titanic Sample Dataset")
+if use_sample:
+    df = load_data("classification/titanic_data.csv")
+else:
+    uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+    if not uploaded_file:
+        st.stop()
+    df = load_data(uploaded_file)
 
-df = load_data(uploaded_file)
 st.subheader("🔍 Raw Data Preview")
 st.dataframe(df.head())
 
@@ -40,7 +43,6 @@ def preprocess_data(df, target_column):
     y = df[target_column]
     X = df.drop(columns=[target_column])
 
-    # Impute missing values
     num_cols = X.select_dtypes(include=np.number).columns
     cat_cols = X.select_dtypes(include='object').columns
 
@@ -51,21 +53,13 @@ def preprocess_data(df, target_column):
         for col in cat_cols:
             X[col] = LabelEncoder().fit_transform(X[col])
 
-    # Standardize
     X = pd.DataFrame(StandardScaler().fit_transform(X), columns=X.columns)
-
     return X, y
 
 X, y = preprocess_data(df, target_column)
 
-# ---- Apply PCA ----
-pca = PCA(n_components=0.95, svd_solver='full')
-X_pca = pca.fit_transform(X)
-
-st.write(f"✅ PCA applied. Reduced from {X.shape[1]} ➝ {X_pca.shape[1]} features (95% variance retained)")
-
 # ---- Train-test Split ----
-X_train, X_test, y_train, y_test = train_test_split(X_pca, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # ---- Model Definitions ----
 base_models = {
@@ -117,14 +111,12 @@ with st.spinner("Training models..."):
                 'Accuracy': round(accuracy_score(y_test, y_pred), 4),
                 'Precision': round(precision_score(y_test, y_pred, average="weighted", zero_division=0), 4),
                 'Recall': round(recall_score(y_test, y_pred, average="weighted", zero_division=0), 4),
-               'F1 Score': round(f1_score(y_test, y_pred, average="weighted", zero_division=0), 4),
-
-
+                'F1 Score': round(f1_score(y_test, y_pred, average="weighted", zero_division=0), 4),
                 'R² Score': round(r2, 4) if r2 is not None else '—'
             })
     else:
         for name, (model, params) in model_params.items():
-            grid = GridSearchCV(model, params, scoring='f1', cv=3, n_jobs=-1)
+            grid = GridSearchCV(model, params, scoring='f1_weighted', cv=3, n_jobs=-1)
             grid.fit(X_train, y_train)
             best_model = grid.best_estimator_
             y_pred = best_model.predict(X_test)
@@ -135,9 +127,9 @@ with st.spinner("Training models..."):
             results.append({
                 'Model': name,
                 'Accuracy': round(accuracy_score(y_test, y_pred), 4),
-                'Precision': round(precision_score(y_test, y_pred, zero_division=0), 4),
-                'Recall': round(recall_score(y_test, y_pred, zero_division=0), 4),
-                'F1 Score': round(f1_score(y_test, y_pred, zero_division=0), 4),
+                'Precision': round(precision_score(y_test, y_pred, average="weighted", zero_division=0), 4),
+                'Recall': round(recall_score(y_test, y_pred, average="weighted", zero_division=0), 4),
+                'F1 Score': round(f1_score(y_test, y_pred, average="weighted", zero_division=0), 4),
                 'R² Score': round(r2, 4) if r2 is not None else '—'
             })
 
@@ -158,7 +150,7 @@ if mode == "Without Tuning":
     model.fit(X_train, y_train)
 else:
     model, params = model_params[best_model_name]
-    grid = GridSearchCV(model, params, scoring='f1', cv=3, n_jobs=-1)
+    grid = GridSearchCV(model, params, scoring='f1_weighted', cv=3, n_jobs=-1)
     grid.fit(X_train, y_train)
     model = grid.best_estimator_
 
@@ -167,4 +159,5 @@ y_pred = model.predict(X_test)
 preview = pd.DataFrame(X_test).copy()
 preview['Actual'] = y_test.values
 preview['Predicted'] = y_pred
+
 st.dataframe(preview.head(20))
