@@ -103,7 +103,7 @@ model_params = {
 }
 
 # ---- Training Mode ----
-mode = st.radio("⚙️ Select Training Mode", ["Without Tuning", "With Tuning"])
+mode = st.radio("⚙️ Select Training Mode", ["Without Tuning", "With Tuning (Please Wait , takes a bit Longer)"])
 results = []
 
 with st.spinner("Training models..."):
