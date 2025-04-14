@@ -33,8 +33,8 @@ use_sample = st.checkbox("Use Titanic Sample Dataset")
 
 if use_sample:
     df = load_sample_data()
-    # Pre-select "Survived" as the target column for Titanic dataset
-    target_column = 'Survived'
+    # Pre-select "Survived" as the target column for Titanic dataset, but allow user to change it
+    target_column = st.selectbox("🎯 Select Target Column", df.columns, index=df.columns.get_loc('Survived'))
 else:
     uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
     if uploaded_file:
