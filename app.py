@@ -74,9 +74,7 @@ def preprocess_data(df, target_column):
     return pd.DataFrame(X), y
 
 
-if y.nunique() < 2:
-    st.error("❌ Classification requires at least two classes in the target column.")
-    st.stop()
+
 X, y = preprocess_data(df, target_column)
 
 try:
