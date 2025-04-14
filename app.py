@@ -73,13 +73,20 @@ def preprocess_data(df, target_column):
     X = VarianceThreshold().fit_transform(X)
     return pd.DataFrame(X), y
 
-X, y = preprocess_data(df, target_column)
 
 if y.nunique() < 2:
     st.error("❌ Classification requires at least two classes in the target column.")
     st.stop()
+X, y = preprocess_data(df, target_column)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.2, random_state=42)
+try:
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+except ValueError as e:
+    st.error("❗ The selected target column doesn't have enough data in each class for splitting. Please choose a different target column.")
+    st.stop()
+
 
 base_models = {
     'Logistic Regression': LogisticRegression(max_iter=1000),
