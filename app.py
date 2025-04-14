@@ -27,7 +27,13 @@ st.subheader("📂 Upload Dataset or Use Sample")
 
 use_sample = st.checkbox("Use Titanic Sample Dataset")
 if use_sample:
-    df = load_data("classification/titanic_data.csv")
+
+
+
+
+    df = pd.read_csv("https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv")
+
+
 else:
     uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
     if not uploaded_file:
