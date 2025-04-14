@@ -17,8 +17,11 @@ st.write("Upload a CSV dataset or test the Titanic dataset. This app trains mult
 
 # ---- Load Data ----
 @st.cache_data
-def load_data(file):
-    return pd.read_csv(file)
+def load_sample_data():
+    url = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
+    return pd.read_csv(url)
+
+
 
 st.subheader("📂 Upload Dataset or Use Sample")
 
